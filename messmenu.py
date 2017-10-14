@@ -4,21 +4,20 @@ from flask import Flask, request
 import json
 import os
 
-botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
+app = Flask(__name__)
 
+
+botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
 users = [
 	{"user_id": '206914582', "mess_choice": 1},
 ]
-
 
 
 def sendMessage(msg, user_id):
 	urllib.request.urlopen('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+user_id+'&text='+urllib.parse.quote_plus(msg))
 
 
-
-app = Flask(__name__)
-@app.route('/'+botToken, methods=['POST'])
+@app.route('/registerNotifications'+botToken, methods=['POST'])
 def webhook_handler():
 	#response = json.loads(urllib.request.urlopen('https://api.telegram.org/bot439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE/getupdates').read().decode('utf-8'))
 	response = request.get_json()
@@ -39,17 +38,7 @@ def webhook_handler():
 	return(str(users))
 
 
-@app.route('/')
-def root():
-    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
-
-@app.route('/<path:path>')
-def catch_all(path):
-    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
-
-
-
-
+@app.route('/sendMenu'+botToken, methods=['GET'])
 def sendMenu():
 	menuTable = (bs.BeautifulSoup(urllib.request.urlopen('http://messmenu.snu.in/messMenu.php/').read(),'lxml')).find_all(id='dh2MenuItems')
 
@@ -65,9 +54,20 @@ def sendMenu():
 	        message = message+"----------------\n" 
 
 	    sendMessage(message, user['user_id'])
+	    return("Menu successfully sent.")
+
+	    
+
+@app.route('/')
+def root():
+    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
+
+@app.route('/<path:path>')
+def catch_all(path):
+    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
+
 
 
 if __name__ == "__main__":
-	sendMenu()
 	port = int(os.environ.get('PORT', 5000))
 	app.run(host='0.0.0.0', port=port, debug=True)
