@@ -2,7 +2,7 @@ import bs4 as bs
 import urllib.request
 from flask import Flask, request
 import json
-
+import os
 
 botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
 
@@ -18,20 +18,35 @@ def sendMessage(msg, user_id):
 
 
 app = Flask(__name__)
-@app.route('/', methods=['POST'])
-def result():
+@app.route('/'+botToken, methods=['POST'])
+def webhook_handler():
 	#response = json.loads(urllib.request.urlopen('https://api.telegram.org/bot439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE/getupdates').read().decode('utf-8'))
 	response = request.get_json()
 	print(response)
 
 	new_user={}
-	new_user["user_id"] = str(response["result"][0]["message"]["chat"]["id"])
-	new_user["mess_choice"] = 1 #response["result"][0]["message"]["text"]
+	if "message" in response:
+		new_user["user_id"] = str(response["message"]["chat"]["id"])
+	else:
+		new_user["user_id"] = str(response["edited_message"]["chat"]["id"])
+	
+	new_user["mess_choice"] = 1 #response["message"]["text"]
+	
 	if not new_user in users:
 		users.append(new_user)
-	sendMessage("Your request for notifications has been registered.\nDefault Mess DH-2 selected.\nThank you!", str(response["result"][0]["message"]["chat"]["id"]))
+	
+	sendMessage("Your request for notifications has been registered.\nDefault Mess DH-2 selected.\nThank you!", new_user["user_id"])
+	return(str(users))
 
-	return("Success.")
+
+@app.route('/')
+def root():
+    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
+
+@app.route('/<path:path>')
+def catch_all(path):
+    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
+
 
 
 
@@ -52,5 +67,7 @@ def sendMenu():
 	    sendMessage(message, user['user_id'])
 
 
-
-sendMenu()
+if __name__ == "__main__":
+	sendMenu()
+	port = int(os.environ.get('PORT', 5000))
+	app.run(host='0.0.0.0', port=port, debug=True)
