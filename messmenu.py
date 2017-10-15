@@ -4,17 +4,18 @@ from flask import Flask, request
 import json
 import os
 import datetime
+import requests
 app = Flask(__name__)
 
 ############# Some Variables
 
 botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
+myjsonUrl = 'https://api.myjson.com/bins/h33hl';
 users = dict()
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/dh1_menu","/dh2_menu"]]}'
 
-if os.path.exists('users.json'):
-	with open('users.json', 'r') as f:
-		users = json.load(f)
+
+users = requests.get(myjsonUrl).json()
 
 print(users)
 print("Printed users")
@@ -118,9 +119,8 @@ def webhook_handler():
 	else:
 		sendMessage("Oops! I don't understand that yet!\nType '/' to see all the commands I do understand.", user_id)
 	
-	with open('users.json', 'w') as f:
-		json.dump(users, f)
-
+	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(users))
+	
 	return(str(users))
 
 
