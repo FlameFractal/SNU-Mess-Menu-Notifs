@@ -9,9 +9,15 @@ app = Flask(__name__)
 ############# Some Variables
 
 botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
-users = {}
+users = dict()
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/dh1_menu","/dh2_menu"]]}'
 
+if os.path.exists('users.json'):
+	with open('users.json', 'r') as f:
+		users = json.load(f)
+
+print(users)
+print("Printed users")
 
 ############# Some important functions
 
@@ -33,7 +39,7 @@ def sendMenu(user_id, mess_choice):
 		for dish in details[1].find_all('p'):
 			#Get each dish
 			message = message+dish.text+"\n" 
-	elif 5<=t.hour<=13:
+	elif 5<=t.hour<=12:
 		message = message + "*Lunch*\n----------------\n"
 		for dish in details[2].find_all('p'):
 			#Get each dish
@@ -112,7 +118,9 @@ def webhook_handler():
 	else:
 		sendMessage("Oops! I don't understand that yet!\nType '/' to see all the commands I do understand.", user_id)
 	
-	
+	with open('users.json', 'w') as f:
+		json.dump(users, f)
+
 	return(str(users))
 
 

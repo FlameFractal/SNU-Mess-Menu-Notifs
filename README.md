@@ -4,21 +4,11 @@ A python-scraper telegram-bot that sends Mess Menu push-notifications right befo
 
 Start this bot [https://t.me/SNUMessBot](https://t.me/SNUMessBot), sit back and relax!
 
-## ToDo
-
-[x] check time and send that time's menu only
-
-[] save users obj to a file
-
 ## Program Flow
 
 ### Webhook (Telegram Commands) 
 
 ![flow1](/imgs/flow1.png)
-
-
-
-
 
 ### Periodic Push Notifications
 
@@ -29,6 +19,8 @@ Start this bot [https://t.me/SNUMessBot](https://t.me/SNUMessBot), sit back and 
 ![screenshot](/imgs/screenshot.png)
 
 ## Version history
+	7. save and retrieve 'users' from disk, incase of restart/crash
+	6. send menu based on time of B/L/D
 	5. added telegram commands
 	4. ability to subscribe new users to notifications
 	3. scheduled thrice a day using heroku scheduler and cron.py
