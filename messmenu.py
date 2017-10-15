@@ -25,6 +25,7 @@ def sendMenu(user_id, mess_choice):
 	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
 	#Get the date of the menu
 	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n" 
+<<<<<<< HEAD
 	details = menuTable[mess_choice].find_all('td')
 
 	t = datetime.datetime.now()
