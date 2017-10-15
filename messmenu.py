@@ -3,6 +3,7 @@ import urllib.request
 from flask import Flask, request
 import json
 import os
+import datetime
 app = Flask(__name__)
 
 ############# Some Variables
@@ -24,13 +25,26 @@ def sendMenu(user_id, mess_choice):
 	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
 	#Get the date of the menu
 	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n" 
-	for time in menuTable[mess_choice].find_all('td'): 
-		# message = message + "breakfast"
-		for dish in time.find_all('p'):
+<<<<<<< HEAD
+	details = menuTable[mess_choice].find_all('td')
+
+	t = datetime.datetime.now()
+	if t.hour < 10:
+		message = message + "Breakfast"
+		for dish in details[0].find_all('p'):
 			#Get each dish
 			message = message+dish.text+"\n" 
-		#Seperate breakfast, lunch, dinner
-		message = message+"----------------\n" 
+
+	elif 10<= t.hour <= 3:
+		message = message + "Lunch"
+		for dish in details[1].find_all('p'):
+			#Get each dish
+			message = message+dish.text+"\n" 
+
+	else:
+		message = message + "Dinner"
+		for dish in details[2].find_all('p'):
+			message = message + dish.text+"\n"
 
 	sendMessage(message, user_id)
 	print("Menu "+str(mess_choice)+" sent successfully to "+user_id)
