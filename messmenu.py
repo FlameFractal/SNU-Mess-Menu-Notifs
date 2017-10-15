@@ -3,12 +3,13 @@ import urllib.request
 from flask import Flask, request
 import json
 import os
+import datetime
 app = Flask(__name__)
 
 ############# Some Variables
 
 botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
-users = {'206914582': 1,}
+users = {}
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/dh1_menu","/dh2_menu"]]}'
 
 
@@ -20,20 +21,58 @@ def sendMessage(msg, user_id):
 
 def sendMenu(user_id, mess_choice):
 	menuTable = (bs.BeautifulSoup(urllib.request.urlopen('http://messmenu.snu.in/messMenu.php/').read(),'lxml')).find_all(id='dh2MenuItems')
+	details = menuTable[mess_choice].find_all('td')
 	
 	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
 	#Get the date of the menu
-	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n" 
-	for time in menuTable[mess_choice].find_all('td'): 
-		# message = message + "breakfast"
-		for dish in time.find_all('p'):
+	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
+	
+	t = datetime.datetime.now()
+	if t.hour<5:
+		message = message + "*Breakfast*\n----------------\n"
+		for dish in details[1].find_all('p'):
 			#Get each dish
 			message = message+dish.text+"\n" 
-		#Seperate breakfast, lunch, dinner
-		message = message+"----------------\n" 
+	elif 5<=t.hour<=13:
+		message = message + "*Lunch*\n----------------\n"
+		for dish in details[2].find_all('p'):
+			#Get each dish
+			message = message+dish.text+"\n" 
+	else:
+		message = message + "*Dinner*\n----------------\n"
+		for dish in details[3].find_all('p'):
+			#Get each dish
+			message = message+dish.text+"\n" 
 
 	sendMessage(message, user_id)
 	print("Menu "+str(mess_choice)+" sent successfully to "+user_id)
+
+
+def sendFullMenu(user_id, mess_choice):
+	menuTable = (bs.BeautifulSoup(urllib.request.urlopen('http://messmenu.snu.in/messMenu.php/').read(),'lxml')).find_all(id='dh2MenuItems')
+	details = menuTable[mess_choice].find_all('td')
+	
+	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
+	#Get the date of the menu
+	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
+	
+	message = message + "*Breakfast*\n----------------\n"
+	for dish in details[1].find_all('p'):
+		#Get each dish
+		message = message+dish.text+"\n" 
+	message = message + "*\nLunch*\n----------------\n"
+	for dish in details[2].find_all('p'):
+		#Get each dish
+		message = message+dish.text+"\n" 
+	message = message + "*\nDinner*\n----------------\n"
+	for dish in details[3].find_all('p'):
+		#Get each dish
+		message = message+dish.text+"\n"  
+
+
+	sendMessage(message, user_id)
+	print("Menu "+str(mess_choice)+" sent successfully to "+user_id)
+
 
 
 ############# APIs to talk to the bot
@@ -65,9 +104,9 @@ def webhook_handler():
 		users[user_id] = 1
 		sendMessage("Your request for notifications has been registered.\nMess DH-2 selected.\nThank you!", user_id)
 	elif user_msg == '/dh1_menu':
-		sendMenu(user_id, 0)
+		sendFullMenu(user_id, 0)
 	elif user_msg == '/dh2_menu':
-		sendMenu(user_id, 1)
+		sendFullMenu(user_id, 1)
 	elif user_msg == '/author':
 		sendMessage("Resides here: [https://github.com/flamefractal/](https://github.com/flamefractal/)", user_id)
 	else:

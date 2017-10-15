@@ -6,7 +6,7 @@ Start this bot [https://t.me/SNUMessBot](https://t.me/SNUMessBot), sit back and 
 
 ## ToDo
 
-[] check time and send that time's menu only
+[x] check time and send that time's menu only
 
 [] save users obj to a file
 
