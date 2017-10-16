@@ -1,85 +1,84 @@
-import bs4 as bs
-import urllib.request
 from flask import Flask, request
+import bs4 as bs
+import requests
 import json
 import os
 import datetime
-import requests
 app = Flask(__name__)
 
 ############# Some Variables
 
-botToken = '439142723:AAGxI51LsPuv0dgzta0lGgH1aJLZfIuDTvE';
-myjsonUrl = 'https://api.myjson.com/bins/h33hl';
-users = dict()
+botToken = str(os.environ.get('botToken'))
+myjsonId = str(os.environ.get('myjsonId'))
+botUsername = str(os.environ.get('botUsername'))
+myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
+messUrl = 'http://messmenu.snu.in/messMenu.php/'
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/dh1_menu","/dh2_menu"]]}'
-
 
 users = requests.get(myjsonUrl).json()
 
-print(users)
-print("Printed users")
 
 ############# Some important functions
 
 def sendMessage(msg, user_id):
-	urllib.request.urlopen('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+user_id+'&text='+urllib.parse.quote_plus(msg)+replyMarkup)
+	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+replyMarkup)
 
 
 def sendMenu(user_id, mess_choice):
-	menuTable = (bs.BeautifulSoup(urllib.request.urlopen('http://messmenu.snu.in/messMenu.php/').read(),'lxml')).find_all(id='dh2MenuItems')
+	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
 	details = menuTable[mess_choice].find_all('td')
 	
 	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
-	#Get the date of the menu
-	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
+
+	if('No Menu' in details[0].text.strip()):
+		message = message + "_No Menu Available!_"
+	else:		
+		#Get the date of the menu
+		message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 	
+		t = datetime.datetime.now()
+		if t.hour<5:
+			message = message + "*Breakfast*\n----------------\n"
+			for dish in details[1].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n" 
+		elif 5<=t.hour<=12:
+			message = message + "*Lunch*\n----------------\n"
+			for dish in details[2].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n" 
+		else:
+			message = message + "*Dinner*\n----------------\n"
+			for dish in details[3].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n" 
+
+	sendMessage(message, user_id)
+
+
+def sendFullMenu(user_id, mess_choice):
+	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
+	details = menuTable[mess_choice].find_all('td')
+	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
 	
-	t = datetime.datetime.now()
-	if t.hour<5:
+	if('No Menu' in details[0].text.strip()):
+		message = message + "_No Menu Available!_"
+	else:					
+		#Get the date of the menu
+		message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
 		message = message + "*Breakfast*\n----------------\n"
 		for dish in details[1].find_all('p'):
 			#Get each dish
 			message = message+dish.text+"\n" 
-	elif 5<=t.hour<=12:
-		message = message + "*Lunch*\n----------------\n"
+		message = message + "*\nLunch*\n----------------\n"
 		for dish in details[2].find_all('p'):
 			#Get each dish
 			message = message+dish.text+"\n" 
-	else:
-		message = message + "*Dinner*\n----------------\n"
+		message = message + "*\nDinner*\n----------------\n"
 		for dish in details[3].find_all('p'):
 			#Get each dish
-			message = message+dish.text+"\n" 
+			message = message+dish.text+"\n"  
 
 	sendMessage(message, user_id)
-	print("Menu "+str(mess_choice)+" sent successfully to "+user_id)
-
-
-def sendFullMenu(user_id, mess_choice):
-	menuTable = (bs.BeautifulSoup(urllib.request.urlopen('http://messmenu.snu.in/messMenu.php/').read(),'lxml')).find_all(id='dh2MenuItems')
-	details = menuTable[mess_choice].find_all('td')
-	
-	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
-	#Get the date of the menu
-	message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
-	
-	message = message + "*Breakfast*\n----------------\n"
-	for dish in details[1].find_all('p'):
-		#Get each dish
-		message = message+dish.text+"\n" 
-	message = message + "*\nLunch*\n----------------\n"
-	for dish in details[2].find_all('p'):
-		#Get each dish
-		message = message+dish.text+"\n" 
-	message = message + "*\nDinner*\n----------------\n"
-	for dish in details[3].find_all('p'):
-		#Get each dish
-		message = message+dish.text+"\n"  
-
-
-	sendMessage(message, user_id)
-	print("Menu "+str(mess_choice)+" sent successfully to "+user_id)
-
 
 
 ############# APIs to talk to the bot
@@ -87,17 +86,17 @@ def sendFullMenu(user_id, mess_choice):
 @app.route('/botWebhook'+botToken, methods=['POST'])
 def webhook_handler():
 	response = request.get_json()
+	user_msg = ''
 	print(response)
-
 	
 	if "message" in response:
 		user_id = str(response["message"]["chat"]["id"])
-		user_msg = str(response["message"]["text"])
+		if "text" in response["message"]: 
+			user_msg = str(response["message"]["text"])
 	else:
 		user_id = str(response["edited_message"]["chat"]["id"])
-		user_msg = str(response["edited_message"]["text"])
-	
-	print(user_msg)
+		if "text" in response["message"]:
+			user_msg = str(response["edited_message"]["text"])
 
 
 	if user_msg == '/start':
@@ -120,24 +119,26 @@ def webhook_handler():
 		sendMessage("Oops! I don't understand that yet!\nType '/' to see all the commands I do understand.", user_id)
 	
 	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(users))
-	
+	# sendMessage(str(response),os.environ.get('debugId')) -> Inline Keyboard expected, sendMessage by default uses replyMarkup
+	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(os.environ.get('debugId'))+'&text='+str(response))
+
 	return(str(users))
 
 
 @app.route('/sendMenuAllUsers'+botToken, methods=['GET'])
 def sendMenuAllUsers():
-	for user in users:
-		sendMenu(user, users[user])
+	for user_id in users:
+		sendMenu(user_id, users[user_id])
 		return("Menu successfully sent.")
 
 
 @app.route('/')
 def root():
-    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
+	return "<a href='http://t.me/"+botUsername+"'>http://t.me/"+botUsername+"</a>"
 
 @app.route('/<path:path>')
 def catch_all(path):
-    return "<a href='http://t.me/SNUMessBot'>http://t.me/SNUMessBot</a>"
+	return "<a href='http://t.me/"+botUsername+"'>http://t.me/"+botUsername+"</a>"
 
 
 ############# Start the flask server!

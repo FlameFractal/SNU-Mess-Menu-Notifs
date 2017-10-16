@@ -2,24 +2,34 @@
 
 A python-scraper telegram-bot that sends Mess Menu push-notifications right before meal timings!
 
+<br>
+
 Start this bot [https://t.me/SNUMessBot](https://t.me/SNUMessBot), sit back and relax!
+
+<br><br>
 
 ## Program Flow
 
-### Webhook (Telegram Commands) 
+#### Webhook (Telegram Commands)
 
 ![flow1](/imgs/flow1.png)
 
-### Periodic Push Notifications
+#### Periodic Push Notifications
 
 ![flow2](/imgs/flow2.png)
+
+<br><br>
 
 ## Screenshots
 
 ![screenshot](/imgs/screenshot.png)
 
+<br><br>
+
 ## Version history
-	7. save and retrieve 'users' from disk, incase of restart/crash
+
+	8. handle 'no menu available', use env vars, post debug msgs to private telegram channel
+	7. save and retrieve 'users', incase of restart/crash
 	6. send menu based on time of B/L/D
 	5. added telegram commands
 	4. ability to subscribe new users to notifications
