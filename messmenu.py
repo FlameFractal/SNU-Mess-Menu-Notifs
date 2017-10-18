@@ -13,7 +13,7 @@ myjsonId = str(os.environ.get('myjsonId'))
 botUsername = str(os.environ.get('botUsername'))
 myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
 messUrl = 'http://messmenu.snu.in/messMenu.php/'
-replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/dh1_menu","/dh2_menu"]]}'
+replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/unregister"],["/dh1_menu","/dh2_menu"]]}'
 
 users = requests.get(myjsonUrl).json()
 
@@ -23,18 +23,15 @@ users = requests.get(myjsonUrl).json()
 def sendMessage(msg, user_id):
 	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+replyMarkup)
 
-
-def sendMenu(user_id, mess_choice):
-	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
-	details = menuTable[mess_choice].find_all('td')
-	
-	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
+def generateMenu(mess, menuTable):
+	details = menuTable[mess].find_all('td')
+	message = "*Menu for DH +"+str(mess)+"*\n\n"
 
 	if('No Menu' in details[0].text.strip()):
 		message = message + "_No Menu Available!_"
 	else:		
 		#Get the date of the menu
-		message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 	
+		message = message + "*"+menuTable[mess].find_all('label')[0].text.strip() + "*\n\n" 	
 		t = datetime.datetime.now()
 		if t.hour<5:
 			message = message + "*Breakfast*\n----------------\n"
@@ -52,31 +49,24 @@ def sendMenu(user_id, mess_choice):
 				#Get each dish
 				message = message+dish.text+"\n" 
 
+	return message
+
+
+def sendMenu(user_id, mess_choice):
+	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
+	message = ""
+	if mess_choice in [0, 1]:
+		message = generateMenu(mess_choice, menuTable)
+	elif mess_choice == 2:
+		message = generateMenu(0, menuTable) + "\n\n" + generateMenu(1, menuTable)
+
 	sendMessage(message, user_id)
 
 
 def sendFullMenu(user_id, mess_choice):
 	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
 	details = menuTable[mess_choice].find_all('td')
-	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
-	
-	if('No Menu' in details[0].text.strip()):
-		message = message + "_No Menu Available!_"
-	else:					
-		#Get the date of the menu
-		message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
-		message = message + "*Breakfast*\n----------------\n"
-		for dish in details[1].find_all('p'):
-			#Get each dish
-			message = message+dish.text+"\n" 
-		message = message + "*\nLunch*\n----------------\n"
-		for dish in details[2].find_all('p'):
-			#Get each dish
-			message = message+dish.text+"\n" 
-		message = message + "*\nDinner*\n----------------\n"
-		for dish in details[3].find_all('p'):
-			#Get each dish
-			message = message+dish.text+"\n"  
+	message = generateMenu(mess_choice, menuTable)
 
 	sendMessage(message, user_id)
 
@@ -109,6 +99,12 @@ def webhook_handler():
 	elif user_msg == '/dh2_notifs':
 		users[user_id] = 1
 		sendMessage("Your request for notifications has been registered.\nMess DH-2 selected.\nThank you!", user_id)
+	elif user_msg == '/both_notifs':
+		users[user_id] = 2
+		sendMessage("Your request for notifications has been registered.\nMess DH-1 and DH-2 selected.\nThank you!", user_id)
+	elif user_msg == '/unregister':
+		users[user_id] = -1
+		sendMessage("Your request for unregistering for notifications has been noted.\nThank you!", user_id)
 	elif user_msg == '/dh1_menu':
 		sendFullMenu(user_id, 0)
 	elif user_msg == '/dh2_menu':
@@ -128,7 +124,9 @@ def webhook_handler():
 @app.route('/sendMenuAllUsers'+botToken, methods=['GET'])
 def sendMenuAllUsers():
 	for user_id in users:
-		sendMenu(user_id, users[user_id])
+		# send only if registered
+		if users[user_id] >= 0:
+			sendMenu(user_id, users[user_id])
 		return("Menu successfully sent.")
 
 
