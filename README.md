@@ -28,6 +28,7 @@ Start this bot [https://t.me/SNUMessBot](https://t.me/SNUMessBot), sit back and 
 
 ## Version history
 
+	9. subscribe to both mess and de-register from notifications. add help menu.
 	8. handle 'no menu available', use env vars, post debug msgs to private telegram channel
 	7. save and retrieve 'users', incase of restart/crash
 	6. send menu based on time of B/L/D
