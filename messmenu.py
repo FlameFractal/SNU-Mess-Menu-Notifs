@@ -13,7 +13,7 @@ myjsonId = str(os.environ.get('myjsonId'))
 botUsername = str(os.environ.get('botUsername'))
 myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
 messUrl = 'http://messmenu.snu.in/messMenu.php/'
-replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu","/dh2_menu"]]}'
+replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu","/dh2_menu"], ["/help", "/author"]]}'
 
 users = requests.get(myjsonUrl).json()
 
@@ -25,7 +25,7 @@ def sendMessage(msg, user_id):
 
 def generateMenu(mess, menuTable):
 	details = menuTable[mess].find_all('td')
-	message = "*Menu for DH +"+str(mess)+"*\n\n"
+	message = "*Menu for DH +"+str(mess+1)+"*\n\n"
 
 	if('No Menu' in details[0].text.strip()):
 		message = message + "_No Menu Available!_"
@@ -58,7 +58,7 @@ def sendMenu(user_id, mess_choice):
 	if mess_choice in [0, 1]:
 		message = generateMenu(mess_choice, menuTable)
 	elif mess_choice == 2:
-		message = generateMenu(0, menuTable) + "\n\n" + generateMenu(1, menuTable)
+		message = generateMenu(0, menuTable) + "\n--------------------------\n" + generateMenu(1, menuTable)
 
 	sendMessage(message, user_id)
 
@@ -130,6 +130,18 @@ def webhook_handler():
 		sendFullMenu(user_id, 1)
 	elif user_msg == '/author':
 		sendMessage("Resides here: [https://github.com/flamefractal/](https://github.com/flamefractal/)", user_id)
+	elif user_msg == '/help':
+		sendMessage("""Hi! I'll send you Mess Menu notifications three times a day, right before your meal timings : 7:30AM, 11:30AM, 7:30PM.\n
+You can use these commands to interface with me:\n
+/dh1\_notifs - Daily notifications for DH1
+/dh2\_notifs - Daily notifications for DH2
+/both\_notifs - Daily notifications for BOTH
+/deregister - NO daily notifications
+/dh1\_menu - Get today's DH1 Menu
+/dh2\_menu - Get today's DH2 Menu
+/help - Display this help menu
+/author - Github handle of the author\n
+To report a bug or suggest improvements, please contact @vishaaaal, thank you.""", user_id)
 	else:
 		sendMessage("Oops! I don't understand that yet!\nType '/' to see all the commands I do understand.", user_id)
 	
