@@ -55,41 +55,46 @@ def generateMenu(mess, menuTable):
 
 
 def sendMenu(user_id, mess_choice):
-	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
-	message = ""
-	if mess_choice in [0, 1]:
-		message = generateMenu(mess_choice, menuTable)
-	elif mess_choice == 2:
-		message = generateMenu(0, menuTable) + "\n--------------------------\n" + generateMenu(1, menuTable)
-
-	sendMessage(message, user_id)
+	try:
+		menuTable = (bs.BeautifulSoup(requests.get(messUrl, timeout=1).text,'lxml')).find_all(id='dh2MenuItems')
+		message = ""
+		if mess_choice in [0, 1]:
+			message = generateMenu(mess_choice, menuTable)
+		elif mess_choice == 2:
+			message = generateMenu(0, menuTable) + "\n--------------------------\n" + generateMenu(1, menuTable)
+		sendMessage(message, user_id)
+	except requests.exceptions.RequestException as e:
+		sendMessage(str(e),user_id)
+		sendMessage("Mess website is not responding. Please check at "+messUrl, user_id)
 
 
 def sendFullMenu(user_id, mess_choice):
-	menuTable = (bs.BeautifulSoup(requests.get(messUrl).text,'lxml')).find_all(id='dh2MenuItems')
-	details = menuTable[mess_choice].find_all('td')
-	message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
-	
-	if('No Menu' in details[0].text.strip()):
-		message = message + "_No Menu Available!_"
-	else:					
-		#Get the date of the menu
-		message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
-		message = message + "*Breakfast*\n----------------\n"
-		for dish in details[1].find_all('p'):
-			#Get each dish
-			message = message+dish.text+"\n" 
-		message = message + "*\nLunch*\n----------------\n"
-		for dish in details[2].find_all('p'):
-			#Get each dish
-			message = message+dish.text+"\n" 
-		message = message + "*\nDinner*\n----------------\n"
-		for dish in details[3].find_all('p'):
-			#Get each dish
-			message = message+dish.text+"\n"  
+	try:
+		menuTable = (bs.BeautifulSoup(requests.get(messUrl, timeout=1).text,'lxml')).find_all(id='dh2MenuItems')
+		details = menuTable[mess_choice].find_all('td')
+		message = "*Menu for DH 1*\n\n" if mess_choice == 0 else "*Menu for DH 2*\n\n"
 
-	sendMessage(message, user_id)
-
+		if('No Menu' in details[0].text.strip()):
+			message = message + "_No Menu Available!_"
+		else:
+			#Get the date of the menu
+			message = message + "*"+menuTable[mess_choice].find_all('label')[0].text.strip() + "*\n\n" 
+			message = message + "*Breakfast*\n----------------\n"
+			for dish in details[1].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n"
+			message = message + "*\nLunch*\n----------------\n"
+			for dish in details[2].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n"
+			message = message + "*\nDinner*\n----------------\n"
+			for dish in details[3].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n"
+		sendMessage(message, user_id)
+	except requests.exceptions.RequestException as e:
+		sendMessage(str(e),user_id)
+		sendMessage("Mess website is not responding. Please check at "+messUrl, user_id)
 
 ############# APIs to talk to the bot
 
