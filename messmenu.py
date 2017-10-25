@@ -158,8 +158,7 @@ def sendMenuAllUsers():
 		if users[user_id] >= 0:
 			sendMenu(user_id, users[user_id])
 		print(user_id)
-	print(users)
-		return("Menu successfully sent.")
+	return("Menu successfully sent.")
 
 
 @app.route('/')
