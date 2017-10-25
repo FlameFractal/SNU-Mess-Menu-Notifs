@@ -94,6 +94,7 @@ def sendFullMenu(user_id, mess_choice):
 
 @app.route('/botWebhook'+botToken, methods=['POST'])
 def webhook_handler():
+	global users
 	response = request.get_json()
 	user_msg = ''
 	print(response)
