@@ -11,6 +11,8 @@ app = Flask(__name__)
 botToken = str(os.environ.get('botToken'))
 myjsonId = str(os.environ.get('myjsonId'))
 botUsername = str(os.environ.get('botUsername'))
+appUrl = str(os.environ.get('appUrl'))
+debugId = str(os.environ.get('debugId'))
 myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
 messUrl = 'http://messmenu.snu.in/messMenu.php/'
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu","/dh2_menu"], ["/help", "/author"]]}'
@@ -146,7 +148,7 @@ To report a bug or suggest improvements, please contact @vishaaaal, thank you.""
 	
 	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(users))
 	# sendMessage(str(response),os.environ.get('debugId')) -> Inline Keyboard expected, sendMessage by default uses replyMarkup
-	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(os.environ.get('debugId'))+'&text='+str(response))
+	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response))
 
 	return(str(users))
 
@@ -173,5 +175,7 @@ def catch_all(path):
 ############# Start the flask server!
 
 if __name__ == "__main__":
+	#set bot webhook automatically
+	print(requests.get('https://api.telegram.org/bot'+botToken+'/setWebhook?url='+appUrl+'/botWebhook'+botToken))
 	port = int(os.environ.get('PORT', 5000))
 	app.run(host='0.0.0.0', port=port, debug=True)
