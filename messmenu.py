@@ -16,7 +16,7 @@ messUrl = 'http://messmenu.snu.in/messMenu.php/'
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu","/dh2_menu"], ["/help", "/author"]]}'
 
 users = requests.get(myjsonUrl).json()
-
+print(users)
 
 ############# Some important functions
 
