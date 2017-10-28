@@ -39,12 +39,22 @@ def generateMenu(mess, menuTable):
 			message = message + "*Breakfast*\n----------------\n"
 			for dish in details[1].find_all('p'):
 				#Get each dish
-				message = message+dish.text+"\n" 
+				message = message+dish.text+"\n"
+			message = message + "*\nLunch*\n----------------\n"
+			for dish in details[2].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n"
+			message = message + "*\nDinner*\n----------------\n"
+			for dish in details[3].find_all('p'):
+				#Get each dish
+				message = message+dish.text+"\n"
+
 		elif 5<=t.hour<=12:
 			message = message + "*Lunch*\n----------------\n"
 			for dish in details[2].find_all('p'):
 				#Get each dish
 				message = message+dish.text+"\n" 
+
 		else:
 			message = message + "*Dinner*\n----------------\n"
 			for dish in details[3].find_all('p'):
