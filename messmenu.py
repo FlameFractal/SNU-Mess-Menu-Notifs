@@ -13,6 +13,7 @@ myjsonId = str(os.environ.get('myjsonId'))
 botUsername = str(os.environ.get('botUsername'))
 appUrl = str(os.environ.get('appUrl'))
 debugId = str(os.environ.get('debugId'))
+secretSauce = str(os.environ.get('secretSauce'))
 myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
 messUrl = 'http://messmenu.snu.in/messMenu.php/'
 replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu","/dh2_menu"], ["/help", "/author"]]}'
@@ -120,7 +121,7 @@ def webhook_handler():
 			user_msg = str(response["message"]["text"])
 	else:
 		user_id = str(response["edited_message"]["chat"]["id"])
-		if "text" in response["message"]:
+		if "text" in response["edited_message"]:
 			user_msg = str(response["edited_message"]["text"])
 
 
@@ -146,6 +147,22 @@ def webhook_handler():
 		sendFullMenu(user_id, 1)
 	elif user_msg == '/author':
 		sendMessage("Resides here: [https://github.com/flamefractal/](https://github.com/flamefractal/)", user_id)
+	elif '/adhoc_update'+secretSauce in user_msg:
+		new_menu = user_msg.replace('/adhoc_update'+secretSauce,'')
+		if '/dh1' in new_menu:
+			new_menu = new_menu.replace('/dh1 ','')
+			new_menu = "*Menu for DH1*\n\n"+new_menu
+			for u_id in users:
+				if users[u_id] == 0 or users[u_id] == 2:
+					sendMessage(new_menu.strip(), u_id)
+		elif '/dh2' in new_menu:
+			new_menu = new_menu.replace('/dh2 ','')
+			new_menu = "*Menu for DH2*\n\n"+new_menu
+			for u_id in users:
+				if users[u_id] == 1 or users[u_id] == 2:
+					sendMessage(new_menu.strip(), u_id)
+		else:
+			sendMessage("Oops. Did not understand that.", user_id)
 	elif user_msg == '/help':
 		sendMessage("""Hi! I'll send you Mess Menu notifications three times a day, right before your meal timings : 7:30AM, 11:30AM, 7:30PM.\n
 You can use these commands to interface with me:\n
