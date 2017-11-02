@@ -16,15 +16,18 @@ debugId = str(os.environ.get('debugId'))
 secretSauce = str(os.environ.get('secretSauce'))
 myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
 messUrl = 'http://messmenu.snu.in/messMenu.php/'
-replyMarkup = '&reply_markup={"keyboard":[["/dh1_notifs","/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu","/dh2_menu"], ["/help", "/author"]]}'
+replyMarkup = '{"keyboard":[["/dh1_notifs", "/dh2_notifs"],["/both_notifs", "/deregister"],["/dh1_menu", "/dh2_menu"], ["/dh2_extras", "/help"]]}'
 
 users = requests.get(myjsonUrl).json()
 print(users)
 
 ############# Some important functions
 
-def sendMessage(msg, user_id):
-	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+replyMarkup)
+def sendMessage(user_id, msg):
+	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+'&reply_markup='+replyMarkup+'&disable_web_page_preview=TRUE')
+
+def sendPhoto(user_id, photo, caption=''):
+	requests.get('https://api.telegram.org/bot'+botToken+'/sendPhoto?chat_id='+str(user_id)+'&photo='+str(photo)+'&caption='+str(caption)+'&replyMarkup='+replyMarkup)
 
 def generateMenu(mess, menuTable):
 	details = menuTable[mess].find_all('td')
@@ -73,10 +76,10 @@ def sendMenu(user_id, mess_choice):
 			message = generateMenu(mess_choice, menuTable)
 		elif mess_choice == 2:
 			message = generateMenu(0, menuTable) + "\n--------------------------\n" + generateMenu(1, menuTable)
-		sendMessage(message, user_id)
+		sendMessage(user_id, message)
 	except requests.exceptions.RequestException as e:
-		sendMessage(str(e),user_id)
-		sendMessage("Mess website is not responding. Please check at "+messUrl, user_id)
+		sendMessage(user_id, str(e))
+		sendMessage(user_id, "Mess website is not responding. Please check at "+messUrl)
 
 
 def sendFullMenu(user_id, mess_choice):
@@ -102,10 +105,10 @@ def sendFullMenu(user_id, mess_choice):
 			for dish in details[3].find_all('p'):
 				#Get each dish
 				message = message+dish.text+"\n"
-		sendMessage(message, user_id)
+		sendMessage(user_id, message)
 	except requests.exceptions.RequestException as e:
-		sendMessage(str(e),user_id)
-		sendMessage("Mess website is not responding. Please check at "+messUrl, user_id)
+		sendMessage(user_id, str(e))
+		sendMessage(user_id, "Mess website is not responding. Please check at "+messUrl)
 
 ############# APIs to talk to the bot
 
@@ -136,27 +139,27 @@ def webhook_handler():
 
 
 	if user_msg == '/start':
-		sendMessage("Hello there! Welcome!", user_id)
-		sendMessage("Your request for notifications has been registered.\nDefault Mess DH-2 selected.\nType '/help' to switch mess!", user_id)
+		sendMessage(user_id, "Hello there! Welcome!")
+		sendMessage(user_id, "Your request for notifications has been registered.\nDefault Mess DH-2 selected.\nType '/help' to switch mess!")
 		users[user_id][0] = 1
 	elif user_msg == '/dh1_notifs':
 		users[user_id][0] = 0
-		sendMessage("Your request for notifications has been registered.\nMess DH-1 selected.\nThank you!", user_id)
+		sendMessage(user_id, "Your request for notifications has been registered.\nMess DH-1 selected.\nThank you!")
 	elif user_msg == '/dh2_notifs':
 		users[user_id][0] = 1
-		sendMessage("Your request for notifications has been registered.\nMess DH-2 selected.\nThank you!", user_id)
+		sendMessage(user_id, "Your request for notifications has been registered.\nMess DH-2 selected.\nThank you!")
 	elif user_msg == '/both_notifs':
 		users[user_id][0] = 2
-		sendMessage("Your request for notifications has been registered.\nMess DH-1 and DH-2 selected.\nThank you!", user_id)
+		sendMessage(user_id, "Your request for notifications has been registered.\nMess DH-1 and DH-2 selected.\nThank you!")
 	elif user_msg == '/deregister':
 		users[user_id][0] = -1
-		sendMessage("Your request for deregistering for notifications has been noted.\nThank you!", user_id)
+		sendMessage(user_id, "Your request for deregistering for notifications has been noted.\nThank you!")
 	elif user_msg == '/dh1_menu':
 		sendFullMenu(user_id, 0)
 	elif user_msg == '/dh2_menu':
 		sendFullMenu(user_id, 1)
-	elif user_msg == '/author':
-		sendMessage("Resides here: [https://github.com/flamefractal/](https://github.com/flamefractal/)", user_id)
+	elif user_msg == '/dh2_extras':
+		sendPhoto(user_id, 'AgADBQAD2qcxG0eK2VfpzkXxLhHWRaQYzDIABHPxFna3WsVEDKgDAAEC', 'DH2 extras menu')
 	elif '/adhoc_update'+secretSauce in user_msg:
 		new_menu = user_msg.replace('/adhoc_update'+secretSauce,'')
 		if '/dh1' in new_menu:
@@ -164,32 +167,37 @@ def webhook_handler():
 			new_menu = "*Menu for DH1*\n\n"+new_menu
 			for user in users:
 				if users[user][0] == 0 or users[user][0] == 2:
-					sendMessage(new_menu.strip(), u_id)
+					sendMessage(user, new_menu.strip())
 		elif '/dh2' in new_menu:
 			new_menu = new_menu.replace('/dh2 ','')
 			new_menu = "*Menu for DH2*\n\n"+new_menu
 			for user in users:
 				if users[user][0] == 1 or users[user][0] == 2:
-					sendMessage(new_menu.strip(), u_id)
+					sendMessage(user, new_menu.strip())
 		else:
-			sendMessage("Oops. Did not understand that.", user_id)
+			sendMessage(user_id, "Oops. Did not understand that.")
 	elif user_msg == '/help':
-		sendMessage("""Hi! I'll send you Mess Menu notifications three times a day, right before your meal timings : 7:30AM, 11:30AM, 7:30PM.\n
+		sendMessage(user_id, """Hi! I'll send you Mess Menu notifications three times a day, right before your meal timings : 7:30AM, 11:30AM, 7:30PM.\n
+
 You can use these commands to interface with me:\n
+
 /dh1\_notifs - Daily notifications for DH1
 /dh2\_notifs - Daily notifications for DH2
 /both\_notifs - Daily notifications for BOTH
 /deregister - NO daily notifications
 /dh1\_menu - Get today's DH1 Menu
 /dh2\_menu - Get today's DH2 Menu
+/dh2\_extras - DH2's Rollu, Evening, Drinks menu.
 /help - Display this help menu
-/author - Github handle of the author\n
-To report a bug or suggest improvements, please contact @vishaaaal, thank you.""", user_id)
+
+Github repo: https://github.com/flamefractal/\n
+
+To report a bug or suggest improvements, please contact @vishaaaal, thank you.""")
 	else:
-		sendMessage("Oops! I don't understand that yet!\nType '/help' to see all the commands.", user_id)
+		sendMessage(user_id, "Oops! I don't understand that yet!\nType '/help' to see all the commands.")
 	
 	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(users))
-	# sendMessage(str(response),os.environ.get('debugId')) -> Inline Keyboard expected, sendMessage by default uses replyMarkup
+	# sendMessage(os.environ.get('debugId'), str(response)) -> Inline Keyboard expected, sendMessage by default uses replyMarkup
 	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response))
 
 	return(str(users))
@@ -197,11 +205,12 @@ To report a bug or suggest improvements, please contact @vishaaaal, thank you.""
 
 @app.route('/sendMenuAllUsers'+botToken, methods=['GET'])
 def sendMenuAllUsers():
+	print("time to send full menu")
 	for user in users:
 		# send only if registered
 		if users[user][0] >= 0:
-			sendMenu(user_id, users[user][0])
-		print(user_id)
+			sendMenu(user, users[user][0])
+			print("sent full menu to "+user+", "+users[user][1])
 	return("Menu successfully sent.")
 
 
