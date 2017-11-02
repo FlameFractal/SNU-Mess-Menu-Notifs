@@ -117,29 +117,39 @@ def webhook_handler():
 	
 	if "message" in response:
 		user_id = str(response["message"]["chat"]["id"])
+		users[user_id][1] = response["message"]["chat"]["first_name"]
+		if "last_name" in response["message"]["chat"]:
+			users[user_id][1] = users[user_id][1] + " " + response["message"]["chat"]["last_name"]
+		if "username" in response["message"]["chat"]:
+			users[user_id][2] = response["message"]["chat"]["username"]
 		if "text" in response["message"]: 
 			user_msg = str(response["message"]["text"])
 	else:
 		user_id = str(response["edited_message"]["chat"]["id"])
+		users[user_id][1] = response["edited_message"]["chat"]["first_name"]
+		if "last_name" in response["edited_message"]["chat"]:
+			users[user_id][1] = users[user_id][1] + " " + response["message"]["chat"]["last_name"]
+		if "username" in response["edited_message"]["chat"]:
+			users[user_id][2] = response["message"]["chat"]["username"]
 		if "text" in response["edited_message"]:
 			user_msg = str(response["edited_message"]["text"])
 
 
 	if user_msg == '/start':
 		sendMessage("Hello there! Welcome!", user_id)
-		sendMessage("Your request for notifications has been registered.\nDefault Mess DH-2 selected.\nType '/' to switch mess!", user_id)
-		users[user_id] = 1
+		sendMessage("Your request for notifications has been registered.\nDefault Mess DH-2 selected.\nType '/help' to switch mess!", user_id)
+		users[user_id][0] = 1
 	elif user_msg == '/dh1_notifs':
-		users[user_id] = 0
+		users[user_id][0] = 0
 		sendMessage("Your request for notifications has been registered.\nMess DH-1 selected.\nThank you!", user_id)
 	elif user_msg == '/dh2_notifs':
-		users[user_id] = 1
+		users[user_id][0] = 1
 		sendMessage("Your request for notifications has been registered.\nMess DH-2 selected.\nThank you!", user_id)
 	elif user_msg == '/both_notifs':
-		users[user_id] = 2
+		users[user_id][0] = 2
 		sendMessage("Your request for notifications has been registered.\nMess DH-1 and DH-2 selected.\nThank you!", user_id)
 	elif user_msg == '/deregister':
-		users[user_id] = -1
+		users[user_id][0] = -1
 		sendMessage("Your request for deregistering for notifications has been noted.\nThank you!", user_id)
 	elif user_msg == '/dh1_menu':
 		sendFullMenu(user_id, 0)
@@ -152,14 +162,14 @@ def webhook_handler():
 		if '/dh1' in new_menu:
 			new_menu = new_menu.replace('/dh1 ','')
 			new_menu = "*Menu for DH1*\n\n"+new_menu
-			for u_id in users:
-				if users[u_id] == 0 or users[u_id] == 2:
+			for user in users:
+				if users[user][0] == 0 or users[user][0] == 2:
 					sendMessage(new_menu.strip(), u_id)
 		elif '/dh2' in new_menu:
 			new_menu = new_menu.replace('/dh2 ','')
 			new_menu = "*Menu for DH2*\n\n"+new_menu
-			for u_id in users:
-				if users[u_id] == 1 or users[u_id] == 2:
+			for user in users:
+				if users[user][0] == 1 or users[user][0] == 2:
 					sendMessage(new_menu.strip(), u_id)
 		else:
 			sendMessage("Oops. Did not understand that.", user_id)
@@ -176,7 +186,7 @@ You can use these commands to interface with me:\n
 /author - Github handle of the author\n
 To report a bug or suggest improvements, please contact @vishaaaal, thank you.""", user_id)
 	else:
-		sendMessage("Oops! I don't understand that yet!\nType '/' to see all the commands I do understand.", user_id)
+		sendMessage("Oops! I don't understand that yet!\nType '/help' to see all the commands.", user_id)
 	
 	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(users))
 	# sendMessage(str(response),os.environ.get('debugId')) -> Inline Keyboard expected, sendMessage by default uses replyMarkup
@@ -187,10 +197,10 @@ To report a bug or suggest improvements, please contact @vishaaaal, thank you.""
 
 @app.route('/sendMenuAllUsers'+botToken, methods=['GET'])
 def sendMenuAllUsers():
-	for user_id in users:
+	for user in users:
 		# send only if registered
-		if users[user_id] >= 0:
-			sendMenu(user_id, users[user_id])
+		if users[user][0] >= 0:
+			sendMenu(user_id, users[user][0])
 		print(user_id)
 	return("Menu successfully sent.")
 
