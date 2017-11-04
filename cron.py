@@ -1,4 +1,4 @@
 import os
 import requests
 
-requests.get(str(os.environ.get('appUrl')+'/sendMenuAllUsers'+str(os.environ.get('botToken'))))
+requests.get(str(os.environ.get('appUrl')+'/sendCurrentMenuAllUsers'+str(os.environ.get('botToken'))))
