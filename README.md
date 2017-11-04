@@ -12,6 +12,7 @@ A telegram-bot that sends Mess Menu push-notifications right before meal timings
 
 ## Version history
 
+	15. support inline mode!
 	14. reduce LOC by 20%
 	13. dining hall 2 - extra items picture
 	12. improved db
