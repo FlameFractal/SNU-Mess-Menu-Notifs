@@ -20,11 +20,10 @@ debugId = str(os.environ.get('debugId'))
 secretSauce = str(os.environ.get('secretSauce'))
 myjsonUrl = 'https://api.myjson.com/bins/'+myjsonId;
 messUrl = 'http://messmenu.snu.in/messMenu.php/'
-replyMarkup = '{"keyboard":[["/dh1_menu", "/dh2_menu"],["/dh1_notifs", "/dh2_notifs"],["/both_notifs", "/deregister"],["/dh2_extras", "/help"]]}'
 users = requests.get(myjsonUrl).json() # { user_id:{mess_choice: (-1:deregister, 0:DH1, 1:DH2), name:, username} }
+replyMarkup = '{"keyboard":[["/dh1_menu", "/dh2_menu"],["/dh1_notifs", "/dh2_notifs"],["/both_notifs", "/deregister"],["/dh2_extras", "/help"]]}'
 BLDString = {0:{1:None, 2:None, 3:None, 4:None, 5:None}, 1:{1:None, 2:None, 3:None, 4:None, 5:None}}
-fetchDict = {0:{"flag":"", "error":"", "menuItems":{}}, 1:{"flag":"", "error":"", "menuItems":{}}}
-lastQuerytime = 0
+fetchDict = {0:{"flag":None, "error":None, "menuItems":None}, 1:{"flag":None, "error":None, "menuItems":None}}
 helpString = """Hi! I'll send you Mess Menu notifications three times a day, right before your meal timings : 7:30AM, 11:30AM, 7:30PM.\n
 
 You can call me in any chat by typing "@snumessbot" or you can use these commands to interface with me:\n
@@ -50,10 +49,10 @@ def debug_print(debug_message):
 		print(str(debug_message))
 
 def sendMessage(user_id, msg):
-	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+'&reply_markup='+replyMarkup+'&disable_web_page_preview=TRUE')
+	return(requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+'&reply_markup='+replyMarkup+'&disable_web_page_preview=TRUE').text)
 
 def sendPhoto(user_id, photo, caption=''):
-	requests.get('https://api.telegram.org/bot'+botToken+'/sendPhoto?chat_id='+str(user_id)+'&photo='+str(photo)+'&caption='+str(caption)+'&replyMarkup='+replyMarkup)
+	return(requests.get('https://api.telegram.org/bot'+botToken+'/sendPhoto?chat_id='+str(user_id)+'&photo='+str(photo)+'&caption='+str(caption)+'&replyMarkup='+replyMarkup).text)
 
 def answerInlineQuery(query_id, mess):
 	t = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
@@ -62,19 +61,17 @@ def answerInlineQuery(query_id, mess):
 		inlineResults = [{"type":"article","id":"0","title":"DH1 - Current time","input_message_content":{"message_text":getBLDString(0,4), "parse_mode": "Markdown"}}, {"type":"article","id":"1","title":"DH1 - Breakfast","input_message_content":{"message_text":datestamp+getBLDString(0,1), "parse_mode": "Markdown"}},{"type":"article","id":"2","title":"DH1 - Lunch","input_message_content":{"message_text":datestamp+getBLDString(0,2), "parse_mode": "Markdown"}},{"type":"article","id":"3","title":"DH1 - Dinner","input_message_content":{"message_text":datestamp+getBLDString(0,3), "parse_mode": "Markdown"}},{"type":"article","id":"4","title":"DH1 - Full day","input_message_content":{"message_text":getBLDString(0,5), "parse_mode": "Markdown"}}]
 	else:
 		inlineResults = [{"type":"article","id":"5","title":"DH2 - Current time","input_message_content":{"message_text":getBLDString(1,4), "parse_mode": "Markdown"}}, {"type":"article","id":"6","title":"DH2 - Breakfast","input_message_content":{"message_text":datestamp+getBLDString(1,1), "parse_mode": "Markdown"}},{"type":"article","id":"7","title":"DH2 - Lunch","input_message_content":{"message_text":datestamp+getBLDString(1,2), "parse_mode": "Markdown"}},{"type":"article","id":"8","title":"DH2 - Dinner","input_message_content":{"message_text":datestamp+getBLDString(1,3), "parse_mode": "Markdown"}},{"type":"article","id":"9","title":"DH2 - Full day","input_message_content":{"message_text":getBLDString(1,5), "parse_mode": "Markdown"}},{"type":"photo","id":"10","title":"DH2 - Extras Menu","description":"DH2 - Extras Menu","caption":"DH2 - Extras Menu", "photo_file_id":str(dh2ExtrasPhotoId)}]
-	debug_print(requests.get('https://api.telegram.org/bot'+botToken+'/answerInlineQuery?inline_query_id='+str(query_id)+'&switch_pm_text=Slow net? Try inside&switch_pm_parameter=help&results='+json.dumps(inlineResults)).text)
+	return (requests.get('https://api.telegram.org/bot'+botToken+'/answerInlineQuery?inline_query_id='+str(query_id)+'&switch_pm_text=Slow net? Try inside&switch_pm_parameter=help&results='+json.dumps(inlineResults)).text)
 
 def getBLDString(mess_choice, bld): # mess choice can be 0,1 .... bld can be 1-Breakfast, 2-Lunch, 3-Dinner, 4-Current, 5-Full
 	global BLDString
-	global lastQuerytime
-	if (time.time()-lastQuerytime>60*5 or BLDString[mess_choice][bld]==None): # templateif it's been 30 minutes, otherwise don't, site is slow
+	if (BLDString[mess_choice][bld]==None): # first check cached string, otherwise cached menu items, otherwise scrape website 
 		global fetchDict
+		if fetchDict[mess_choice]["flag"] == None:
+			fetchMenuItems()
 		if (fetchDict[mess_choice]["flag"]==False):
 			BLDString[mess_choice][bld] = "Encountered connection error while fetching this item. Please verify at "+messUrl+".\n\n_"+fetchDict[mess_choice]["error"]+"_\n"
-			requests.get(str(os.environ.get('appUrl')+'/fetchMenuItems'+str(os.environ.get('botToken'))))
 		else:
-			if fetchDict[mess_choice]["flag"] == '':
-				requests.get(str(os.environ.get('appUrl')+'/fetchMenuItems'+str(os.environ.get('botToken'))))
 			BLDString[mess_choice][bld] = "*DH"+str(mess_choice+1)
 			t = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
 			datestamp = "*"+t.strftime("%A")+", "+t.strftime("%d")+" "+t.strftime("%B")+" "+str(t.year)+"*\n\n"
@@ -99,54 +96,47 @@ def getBLDString(mess_choice, bld): # mess choice can be 0,1 .... bld can be 1-B
 				BLDString[mess_choice][bld] =datestamp+getBLDString(mess_choice,1) + "\n\n" + getBLDString(mess_choice,2) + "\n\n" + getBLDString(mess_choice,3)
 				return BLDString[mess_choice][bld]
 			
-			for dish in fetchDict[mess_choice]["menuItems"][bld].find_all('p'):
+			for dish in fetchDict[mess_choice]["menuItems"][bld-1].find_all('p'):
 				BLDString[mess_choice][bld] = BLDString[mess_choice][bld]+dish.text+"\n"
 	return BLDString[mess_choice][bld]
 
 def sendCurrentMenuAllUsers():
 	for user_id in users:
-		if "mess_choice" in users[user_id]: # send only if registered for notifications
-			if users[user_id]["mess_choice"] >= 0: 
-				sendMessage(user_id, getBLDString(users[user_id]["mess_choice"], 4))
+		if "mess_choice" in users[user_id] and users[user_id]["mess_choice"] >= 0: # send only if registered for notifications
+			sendMessage(user_id, getBLDString(users[user_id]["mess_choice"], 4))
 
 ######################### APIs to talk to the bot #########################
 
 @app.route('/botWebhook'+botToken, methods=['POST'])
 def webhook_handler():
 	user_msg = ''
-	query_msg = None
 	response = request.get_json()
 	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response))
 	
-	if("message" in response):
-		field = "message"
-		if "text" in response[field]:
-			user_msg = str(response[field]["text"]) # get the message
-		user_id = str(response[field]["from"]["id"]) # get the id 
-	elif("edited_message" in response):
-		field = "edited_message"
-		user_msg = str(response[field]["text"]) # get the message
-		user_id = str(response[field]["from"]["id"]) # get the id 
-	elif("inline_query" in response):
+	if("inline_query" in response):
 		field = "inline_query"
 		user_id = str(response[field]["from"]["id"]) # get the user id 
 		query_id = str(response[field]["id"]) # get the query id 
 		query_msg = str(response[field]["query"]) # get the message 
 		if query_msg.strip()=='' and "mess_choice" in users[user_id]: # if user hasnt entered query, show him his mess_choice menu !
 			query_msg = str((users[user_id]["mess_choice"])+1)
-		debug_print(answerInlineQuery(query_id, query_msg))
-	else:
+		return(answerInlineQuery(query_id, query_msg))
+	
+	if("message" in response):
+		field = "message"
+	elif("edited_message" in response):
+		field = "edited_message"
+	elif("chosen_inline_result" in response):
+		sendMessage(str(response["chosen_inline_result"]["from"]["id"]), "Thanks...i guess.")
 		return str(response)
 
 	# extract user information
+	user_msg = str(response[field]["text"]) if "text" in response[field] else '' # get the message
+	user_id = str(response[field]["from"]["id"]) if "id" in response[field]["from"] else '999' # get the id 
 	users[user_id] = {}
-	lastQuerytime = response[field]["date"]
-	if "first_name" in response[field]["from"]: # get the first name
-		users[user_id]["name"] = response[field]["from"]["first_name"]
-	if "last_name" in response[field]["from"]: # get the last name
-		users[user_id]["name"] = users[user_id]["name"] + " " + response[field]["chat"]["last_name"]
-	if "username" in response[field]["chat"]: # get the username
-		users[user_id]["username"] = response[field]["chat"]["username"]
+	users[user_id]["name"] = response[field]["from"]["first_name"] if "first_name" in response[field]["from"] else 'unknown' # get the first name
+	users[user_id]["name"] = users[user_id]["name"] + " " + response[field]["chat"]["last_name"] if "last_name" in response[field]["from"] else '' # get the last name
+	users[user_id]["username"] = response[field]["chat"]["username"]	if "username" in response[field]["chat"] else 'unknown' # get the username
 
 	botReply = ""
 	if user_msg == '/start':
@@ -169,32 +159,29 @@ def webhook_handler():
 	elif user_msg == '/dh2_menu':
 		botReply = getBLDString(1, 5)
 	elif user_msg == '/dh2_extras':
-		sendPhoto(user_id, dh2ExtrasPhotoId, 'DH2 Extras Menu')
-		return ''
+		return(sendPhoto(user_id, dh2ExtrasPhotoId, 'DH2 Extras Menu'))
+	elif user_msg == '/refresh':
+		fetchMenuItems()
+		botReply = 'Refreshed menu from site.'
 	elif '/adhoc_update'+secretSauce in user_msg: # admin function
 		new_menu = user_msg.replace('/adhoc_update'+secretSauce,'')
 		if '/dh1' in new_menu:
-			new_menu = new_menu.replace('/dh1 ','')
-			new_menu = "*Menu for DH1*\n\n"+new_menu
+			new_menu = "*Menu for DH1*\n\n" + new_menu.replace('/dh1 ','')
 			for user_id in users:
-				if users[user_id]["mess_choice"] == 0 or users[user_id]["mess_choice"] == 2:
+				if "mess_choice" in users[user_id] and (users[user_id]["mess_choice"] == 0 or users[user_id]["mess_choice"] == 2):
 					sendMessage(user_id, new_menu.strip())
 		elif '/dh2' in new_menu:
-			new_menu = new_menu.replace('/dh2 ','')
-			new_menu = "*Menu for DH2*\n\n"+new_menu
+			new_menu = "*Menu for DH2*\n\n" + new_menu.replace('/dh2 ','')
 			for user_id in users:
-				if users[user]["mess_choice"] == 1 or users[user_id]["mess_choice"] == 2:
+				if "mess_choice" in users[user_id] and (users[user]["mess_choice"] == 1 or users[user_id]["mess_choice"] == 2):
 					sendMessage(user_id, new_menu.strip())
 		else:
 			sendMessage(user_id,"Oops. Did not understand that.")
-		return ''
+		return str(response)
 	elif user_msg == '/help':
 		botReply = helpString
 	else:
-		if query_msg!=None:
-			return str(response)
-		else:
-			botReply =  "Oops! I don't understand that yet!\nType '/help' to see all the commands."
+		botReply =  "Oops! I don't understand that yet!\nType '/help' to see all the commands."
 	sendMessage(user_id, botReply)	
 	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(users)) # update users database
 	return str(response)
@@ -209,10 +196,10 @@ def fetchMenuItems():
 				fetchDict[mess_choice]["error"] = "_No Menu Available!_"
 				fetchDict[mess_choice]["flag"] = False
 			else:
-				fetchDict[mess_choice]["error"] = ""
+				fetchDict[mess_choice]["error"] = None
 				fetchDict[mess_choice]["flag"] = True
 		except requests.exceptions.RequestException as e:
-			fetchDict[mess_choice]["menuItems"] = ""
+			fetchDict[mess_choice]["menuItems"] = None
 			fetchDict[mess_choice]["error"] = str(e)
 			fetchDict[mess_choice]["flag"] = False
 	return str(fetchDict)
