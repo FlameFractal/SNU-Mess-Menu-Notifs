@@ -65,17 +65,16 @@ def answerInlineQuery(query_id, mess):
 
 def getBLDString(mess_choice, bld): # mess choice can be 0,1 .... bld can be 1-Breakfast, 2-Lunch, 3-Dinner, 4-Current, 5-Full
 	global BLDString
+	t = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
+	datestamp = "*"+t.strftime("%A")+", "+t.strftime("%d")+" "+t.strftime("%B")+" "+str(t.year)+"*\n\n"
 	if (BLDString[mess_choice][bld]==None): # first check cached string, otherwise cached menu items, otherwise scrape website 
 		global fetchDict
 		if fetchDict[mess_choice]["flag"] == None:
 			fetchMenuItems()
 		if (fetchDict[mess_choice]["flag"]==False):
-			BLDString[mess_choice][bld] = "Encountered connection error while fetching this item. Please verify at "+messUrl+".\n\n_"+fetchDict[mess_choice]["error"]+"_\n"
+			BLDString[mess_choice][bld] = datestamp+"Encountered an error while fetching this item. Please verify at "+messUrl+".\n\n*ERROR:* _"+fetchDict[mess_choice]["error"]+"_\n"
 		else:
 			BLDString[mess_choice][bld] = "*DH"+str(mess_choice+1)
-			t = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
-			datestamp = "*"+t.strftime("%A")+", "+t.strftime("%d")+" "+t.strftime("%B")+" "+str(t.year)+"*\n\n"
-			
 			if bld==1: 
 				BLDString[mess_choice][bld] = BLDString[mess_choice][bld]+" "+"Breakfast*\n----------------\n"
 			elif bld==2:
@@ -101,9 +100,14 @@ def getBLDString(mess_choice, bld): # mess choice can be 0,1 .... bld can be 1-B
 	return BLDString[mess_choice][bld]
 
 def sendCurrentMenuAllUsers():
-	for user_id in users:
-		if "mess_choice" in users[user_id] and users[user_id]["mess_choice"] >= 0: # send only if registered for notifications
+	user_id = 206914582	
+	if "mess_choice" in users[user_id] and users[user_id]["mess_choice"] >= 0: # send only if registered for notifications
+		if users[user_id]["mess_choice"] == 2:
+			sendMessage(user_id, getBLDString(0, 4)+getBLDString(1, 4))
+			debug_print("sent notif to "+user_id)
+		else:
 			sendMessage(user_id, getBLDString(users[user_id]["mess_choice"], 4))
+			debug_print("sent notif to "+user_id)
 
 ######################### APIs to talk to the bot #########################
 
@@ -126,8 +130,7 @@ def webhook_handler():
 		field = "message"
 	elif("edited_message" in response):
 		field = "edited_message"
-	elif("chosen_inline_result" in response):
-		sendMessage(str(response["chosen_inline_result"]["from"]["id"]), "Thanks...i guess.")
+	else:
 		return str(response)
 
 	# extract user information
@@ -135,11 +138,12 @@ def webhook_handler():
 	user_id = str(response[field]["from"]["id"]) if "id" in response[field]["from"] else '999' # get the id 
 	users[user_id] = {}
 	users[user_id]["name"] = response[field]["from"]["first_name"] if "first_name" in response[field]["from"] else 'unknown' # get the first name
-	users[user_id]["name"] = users[user_id]["name"] + " " + response[field]["chat"]["last_name"] if "last_name" in response[field]["from"] else '' # get the last name
+	users[user_id]["name"] = users[user_id]["name"] + " " + response[field]["chat"]["last_name"] if "last_name" in response[field]["from"] else users[user_id]["name"] # get the last name
 	users[user_id]["username"] = response[field]["chat"]["username"]	if "username" in response[field]["chat"] else 'unknown' # get the username
+	users[user_id]["mess_choice"] = 1
 
 	botReply = ""
-	if user_msg == '/start':
+	if '/start' in user_msg :
 		users[user_id]["mess_choice"] = 1
 		botReply = "Hello there! Welcome!\nYour request for notifications has been registered.\nDefault Mess DH-2 selected.\nType '/help' to switch mess!"
 	elif user_msg == '/dh1_notifs':
@@ -161,8 +165,7 @@ def webhook_handler():
 	elif user_msg == '/dh2_extras':
 		return(sendPhoto(user_id, dh2ExtrasPhotoId, 'DH2 Extras Menu'))
 	elif user_msg == '/refresh':
-		fetchMenuItems()
-		botReply = 'Refreshed menu from site.'
+		botReply = '*Refreshed menu from site.*\n\n'+str(fetchMenuItems())
 	elif '/adhoc_update'+secretSauce in user_msg: # admin function
 		new_menu = user_msg.replace('/adhoc_update'+secretSauce,'')
 		if '/dh1' in new_menu:
