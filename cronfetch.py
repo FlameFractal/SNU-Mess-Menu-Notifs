@@ -1,4 +1,6 @@
 import os
 import requests
 
-requests.get(str(os.environ.get('appUrl')+'/fetchMenuItems'+str(os.environ.get('botToken'))))
+db = requests.get('https://api.myjson.com/bins/'+str(os.environ.get('myjsonId'))).json()
+
+requests.get(db["config"]["appUrl"]+'/fetchMenuItems'+db["config"]["botToken"])
