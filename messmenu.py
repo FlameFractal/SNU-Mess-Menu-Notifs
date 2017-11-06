@@ -100,14 +100,31 @@ def getBLDString(mess_choice, bld): # mess choice can be 0,1 .... bld can be 1-B
 	return BLDString[mess_choice][bld]
 
 def sendCurrentMenuAllUsers():
-	user_id = 206914582	
-	if "mess_choice" in users[user_id] and users[user_id]["mess_choice"] >= 0: # send only if registered for notifications
-		if users[user_id]["mess_choice"] == 2:
-			sendMessage(user_id, getBLDString(0, 4)+getBLDString(1, 4))
-			debug_print("sent notif to "+user_id)
-		else:
-			sendMessage(user_id, getBLDString(users[user_id]["mess_choice"], 4))
-			debug_print("sent notif to "+user_id)
+	for user_id in users:
+		if "mess_choice" in users[user_id] and users[user_id]["mess_choice"] >= 0: # send only if registered for notifications
+			if users[user_id]["mess_choice"] == 2:
+				sendMessage(user_id, getBLDString(0, 4)+getBLDString(1, 4))
+			else:
+				sendMessage(user_id, getBLDString(users[user_id]["mess_choice"], 4))
+			debug_print("sent notification to "+user_id)
+	return('')
+
+def fetchMenuItems():
+	global fetchDict
+	for mess_choice in (0,1):
+		try:
+			fetchDict[mess_choice]["menuItems"] = ((bs.BeautifulSoup(requests.get(messUrl, timeout=1).text,'lxml')).find_all(id='dh2MenuItems'))[mess_choice].find_all('td')
+			if('No Menu' in fetchDict[mess_choice]["menuItems"][0].text.strip()):
+				fetchDict[mess_choice]["error"] = "_No Menu Available!_"
+				fetchDict[mess_choice]["flag"] = False
+			else:
+				fetchDict[mess_choice]["error"] = None
+				fetchDict[mess_choice]["flag"] = True
+		except requests.exceptions.RequestException as e:
+			fetchDict[mess_choice]["menuItems"] = None
+			fetchDict[mess_choice]["error"] = str(e)
+			fetchDict[mess_choice]["flag"] = False
+	return str(fetchDict)
 
 ######################### APIs to talk to the bot #########################
 
@@ -190,27 +207,12 @@ def webhook_handler():
 	return str(response)
 
 @app.route('/fetchMenuItems'+botToken, methods=['GET'])
-def fetchMenuItems():
-	global fetchDict
-	for mess_choice in (0,1):
-		try:
-			fetchDict[mess_choice]["menuItems"] = ((bs.BeautifulSoup(requests.get(messUrl, timeout=1).text,'lxml')).find_all(id='dh2MenuItems'))[mess_choice].find_all('td')
-			if('No Menu' in fetchDict[mess_choice]["menuItems"][0].text.strip()):
-				fetchDict[mess_choice]["error"] = "_No Menu Available!_"
-				fetchDict[mess_choice]["flag"] = False
-			else:
-				fetchDict[mess_choice]["error"] = None
-				fetchDict[mess_choice]["flag"] = True
-		except requests.exceptions.RequestException as e:
-			fetchDict[mess_choice]["menuItems"] = None
-			fetchDict[mess_choice]["error"] = str(e)
-			fetchDict[mess_choice]["flag"] = False
-	return str(fetchDict)
+def fn2():
+	return(fetchMenuItems())
 
 @app.route('/sendCurrentMenuAllUsers'+botToken, methods=['GET'])
 def fn():
-	sendCurrentMenuAllUsers()
-	return 'sent menu to all users'
+	return(sendCurrentMenuAllUsers())
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
