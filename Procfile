@@ -1,1 +1,1 @@
-web: python messmenu.py
+web: gunicorn messmenu:app

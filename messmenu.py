@@ -96,7 +96,7 @@ def fetchMenuItems():
 		inlineResults[mess_choice].append({"type":"photo","id":str(counter),"title":"DH"+str(mess_choice+1)+" - Extras Menu","photo_file_id":str(extrasPhotoId[mess_choice]),"description":"DH"+str(mess_choice+1)+" - Extras Menu","caption":"DH"+str(mess_choice+1)+" - Extras Menu"})
 		counter = counter + 1
 
-	debug_print(str(BLDString)+"\n\n\n"+str(inlineResults))
+	# debug_print(str(BLDString)+"\n\n\n"+str(inlineResults))
 	return "I'm up to date with SNU website now. Thanks!"
 
 def sendCurrentMenuAllUsers():
@@ -114,11 +114,16 @@ def sendCurrentMenuAllUsers():
 @app.route('/botWebhook'+botToken, methods=['POST'])
 def webhook_handler():
 	response = request.get_json()
-	requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response))
-	
+	try:
+		requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response), timeout=1)
+	except:
+		debug_print('')
+
 	if("inline_query" in response):
 		field = "inline_query"
 		user_id = str(response[field]["from"]["id"]) # get the user id 
+		if user_id == '376483850':
+			return 'spam blocked', 200
 		query_id = str(response[field]["id"]) # get the query id 
 		query_msg = str(response[field]["query"]) # get the message 
 		if user_id in users:
@@ -141,6 +146,8 @@ def webhook_handler():
 	# extract user information
 	user_msg = str(response[field]["text"]) if "text" in response[field] else '' # get the message
 	user_id = str(response[field]["from"]["id"]) if "id" in response[field]["from"] else '999' # get the id 
+	if user_id == '376483850':
+		return 'spam blocked', 200
 	users[user_id] = {}
 	users[user_id]["name"] = response[field]["from"]["first_name"] if "first_name" in response[field]["from"] else 'unknown' # get the first name
 	users[user_id]["name"] = users[user_id]["name"] + " " + response[field]["chat"]["last_name"] if "last_name" in response[field]["from"] else users[user_id]["name"] # get the last name
@@ -179,14 +186,14 @@ def webhook_handler():
 		datestamp = "*"+time.strftime("%A")+", "+time.strftime("%d")+" "+time.strftime("%B")+" "+str(time.year)+"*\n\n"
 		new_menu = user_msg.replace('/adhoc_update'+secretSauce,'')
 		if '/dh1' in new_menu:
-			new_menu = "*Menu for DH1*\n\n" + new_menu.replace('/dh1 ','')
+			new_menu = "*Menu for DH1*\n\n" + new_menu.replace('/dh1 ','').strip()
 			for user_id in users:
 				if "mess_choice" in users[user_id] and (users[user_id]["mess_choice"] == 0 or users[user_id]["mess_choice"] == 2):
 					sendMessage(user_id, datestamp+new_menu.strip())
 		elif '/dh2' in new_menu:
 			new_menu = "*Menu for DH2*\n\n" + new_menu.replace('/dh2 ','')
 			for user_id in users:
-				if "mess_choice" in users[user_id] and (users[user]["mess_choice"] == 1 or users[user_id]["mess_choice"] == 2):
+				if "mess_choice" in users[user_id] and (users[user_id]["mess_choice"] == 1 or users[user_id]["mess_choice"] == 2):
 					sendMessage(user_id, datestamp+new_menu.strip())
 		else:
 			sendMessage(user_id,"Oops. Did not understand that.")
@@ -195,7 +202,7 @@ def webhook_handler():
 		botReply = helpString
 	else:
 		botReply =  "Oops! I don't understand that yet!\nType '/help' to see all the commands."
-	debug_print(sendMessage(user_id, botReply))
+	sendMessage(user_id, botReply)
 	return str(response)
 
 @app.route('/fetchMenuItems'+botToken, methods=['GET'])
@@ -213,8 +220,8 @@ def catch_all(path):
 
 ######################### Start the flask server! #########################
 
+debug_print('webhook set - '+str(requests.get('https://api.telegram.org/bot'+botToken+'/setWebhook?url='+appUrl+'/botWebhook'+botToken))) #set bot webhook automatically
+fetchMenuItems()
+
 if __name__ == "__main__":
-	debug_print(users)
-	debug_print(requests.get('https://api.telegram.org/bot'+botToken+'/setWebhook?url='+appUrl+'/botWebhook'+botToken)) #set bot webhook automatically
-	fetchMenuItems()
 	app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
