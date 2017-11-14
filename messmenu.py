@@ -109,6 +109,28 @@ def sendCurrentMenuAllUsers():
 			debug_print("sent notification to "+user_id)
 	return('')
 
+def att(attended, conducted, percentage='75'):
+	attended = int(attended)
+	conducted = int(conducted)
+	percentage = int(percentage)
+	if not attended>0 or not conducted>0 or not attended<conducted or not 100>=percentage>=0:
+		return '/att \[attended] \[conducted] \[req att % eg. 75] (optional)'
+	temp = conducted
+	temp2 = attended
+	# can't miss
+	if (attended/conducted < percentage/100):
+		while(temp2/temp <= percentage/100):
+			temp2 = temp2 + 1
+			temp = temp + 1
+		s = "You need to attend "+str(temp2-attended)+" more classes for final of %0.2f" %((temp2*100)/(temp))
+		return s+"% = "+str(temp2)+"/"+str(temp)
+	else: # can miss
+	
+		while(attended/temp>=percentage/100):
+			temp = temp+1
+		s = "You can miss "+str(temp-1-conducted)+" more classes for final of %0.2f" %((attended*100)/(temp-1))
+		return s +"% = "+str(attended)+"/"+str(temp-1)
+
 ######################### APIs to talk to the bot #########################
 
 @app.route('/botWebhook'+botToken, methods=['POST'])
@@ -181,6 +203,9 @@ def webhook_handler():
 		return(sendPhoto(user_id, extrasPhotoId[1], 'DH2 Extras Menu'))
 	elif user_msg == '/refresh':
 		botReply = '*'+str(fetchMenuItems())+'*'
+	elif '/att' in user_msg:
+		a = user_msg.split(' ')
+		botReply = '/att \[attended] \[conducted] \[req att % eg. 75] (optional)' if len(a)<3 else att(a[1],a[2]) if len(a)==3 else att(a[1],a[2],a[3])
 	elif '/adhoc_update'+secretSauce in user_msg: # admin function
 		time = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
 		datestamp = "*"+time.strftime("%A")+", "+time.strftime("%d")+" "+time.strftime("%B")+" "+str(time.year)+"*\n\n"
@@ -224,4 +249,4 @@ debug_print('webhook set - '+str(requests.get('https://api.telegram.org/bot'+bot
 fetchMenuItems()
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+	app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
