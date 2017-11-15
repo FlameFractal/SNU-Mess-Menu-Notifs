@@ -236,6 +236,7 @@ def fn2():
 
 @app.route('/sendCurrentMenuAllUsers'+botToken, methods=['GET'])
 def fn():
+	fetchMenuItems()
 	return(sendCurrentMenuAllUsers())
 
 @app.route('/', defaults={'path': ''})
