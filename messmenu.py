@@ -6,6 +6,7 @@ import os
 import datetime
 import time
 import pytz
+import threading
 app = Flask(__name__)
 debug_print_on = True
 
@@ -100,6 +101,7 @@ def fetchMenuItems():
 	return "I'm up to date with SNU website now. Thanks!"
 
 def sendCurrentMenuAllUsers():
+	fetchMenuItems()
 	for user_id in users:
 		if "mess_choice" in users[user_id] and users[user_id]["mess_choice"] >= 0: # send only if registered for notifications
 			if users[user_id]["mess_choice"] == 2:
@@ -131,11 +133,7 @@ def att(attended, conducted, percentage='75'):
 		s = "You can miss "+str(temp-1-conducted)+" more classes for final of %0.2f" %((attended*100)/(temp-1))
 		return s +"% = "+str(attended)+"/"+str(temp-1)
 
-######################### APIs to talk to the bot #########################
-
-@app.route('/botWebhook'+botToken, methods=['POST'])
-def webhook_handler():
-	response = request.get_json()
+def webhook_handler(response):
 	try:
 		requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response), timeout=1)
 	except:
@@ -170,12 +168,14 @@ def webhook_handler():
 	user_id = str(response[field]["from"]["id"]) if "id" in response[field]["from"] else '999' # get the id 
 	if user_id == '376483850':
 		return 'spam blocked', 200
-	users[user_id] = {}
+	if user_id not in users:
+		users[user_id] = {}
 	users[user_id]["name"] = response[field]["from"]["first_name"] if "first_name" in response[field]["from"] else 'unknown' # get the first name
 	users[user_id]["name"] = users[user_id]["name"] + " " + response[field]["chat"]["last_name"] if "last_name" in response[field]["from"] else users[user_id]["name"] # get the last name
 	users[user_id]["username"] = response[field]["chat"]["username"]	if "username" in response[field]["chat"] else 'unknown' # get the username
 	users[user_id]["last_query"] = str(response)
-	users[user_id]["mess_choice"] = 1
+	if "mess_choice" not in users[user_id]:
+		users[user_id]["mess_choice"] = 1
 
 	botReply = ""
 	if '/start' in user_msg :
@@ -230,14 +230,37 @@ def webhook_handler():
 	sendMessage(user_id, botReply)
 	return str(response)
 
+######################### APIs to talk to the bot #########################
+
+@app.route('/botWebhook'+botToken, methods=['POST'])
+def fn():
+	try:
+		debug_print("starting new thread for webhook")
+		threading.Thread(target=webhook_handler, args=[request.get_json()]).start()
+	except:
+		debug_print("coudln't start thread, responsing webhook normally")
+		webhook_handler(request.get_json())
+	return ' '
+
 @app.route('/fetchMenuItems'+botToken, methods=['GET'])
 def fn2():
-	return(fetchMenuItems())
+	try:
+		debug_print("starting new thread for fetching menu items")
+		threading.Thread(target=fetchMenuItems).start()
+	except:
+		debug_print("coudln't start thread, fetching menu items normally")
+		fetchMenuItems()
+	return ' '
 
 @app.route('/sendCurrentMenuAllUsers'+botToken, methods=['GET'])
-def fn():
-	fetchMenuItems()
-	return(sendCurrentMenuAllUsers())
+def fn3():
+	try:
+		debug_print("started thread for sending notifications")
+		threading.Thread(target=sendCurrentMenuAllUsers).start()
+	except:
+		debug_print("coudln't start thread, sending notifications normally")
+		sendCurrentMenuAllUsers()
+	return ' '
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -250,4 +273,4 @@ debug_print('webhook set - '+str(requests.get('https://api.telegram.org/bot'+bot
 fetchMenuItems()
 
 if __name__ == "__main__":
-	app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+	app.run(threaded=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
