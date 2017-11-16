@@ -12,6 +12,7 @@ A telegram-bot that sends Mess Menu push-notifications right before meal timings
 
 ## Version history
 
+	17. manual refresh command, threading, attendance
 	16. performance improvement
 	15. support inline mode!
 	14. reduce LOC by 20%
@@ -33,10 +34,7 @@ A telegram-bot that sends Mess Menu push-notifications right before meal timings
 
 ## Functions
 
-- `fetchMenuItems(mess_choice)` : It makes a request to the [SNU Mess Website](messmenu.snu.in/messMenu.php) and returns the menu items for that particular mess. A flag indicates the case of error, and returns error string too. 
-- `getBLDString(mess_choice, bld)` : It templates and returns a string with `date, mess number, and the menu items`. 10 possible outputs - 2 messes and 5(breakfast,lunch,dinner,current,full) menus.
-- `sendFullMenu(user_id, mess)` : Sends full mess menu of that use
-- `sendCurrentMenuAllUsers()` : Sends menu notifications to all users acc. to their registered mess choice
+![](/imgs/functions.png)
 
 <br><br>
 
