@@ -34,7 +34,7 @@ A telegram-bot that sends Mess Menu push-notifications right before meal timings
 
 ## Functions
 
-![](/imgs/functions.png)
+![](/imgs/functions.PNG)
 
 <br><br>
 
