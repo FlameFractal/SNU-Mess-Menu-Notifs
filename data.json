@@ -1,0 +1,12 @@
+{
+	"config": {
+		"botUsername": "SNUMessBot",
+		"botToken": "439142723:AAFq-uWm6tQ9tqZbs1H8MO2MA6pT7oMxXsE",
+		"extrasPhotoId": "",
+		"appUrl": "https://mess-menu-bot.herokuapp.com/",
+		"debugId": "",
+		"secretSauce": "",
+		"messUrl": "http://messmenu.snu.in/messMenu.php"
+	},
+	"users":{}
+}

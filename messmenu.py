@@ -8,12 +8,14 @@ import time
 import pytz
 import threading
 app = Flask(__name__)
-debug_print_on = True
+debug_print_on = False
 
 ######################### Global Variables #########################
 
-myjsonUrl = 'https://api.myjson.com/bins/'+str(os.environ.get('myjsonId'))
-db = requests.get(myjsonUrl).json()
+f = open('./data.json', "r")
+db = json.loads(f.read())
+f.close()
+
 users = db["users"]
 botToken = db["config"]["botToken"]
 extrasPhotoId = db["config"]["extrasPhotoId"]
@@ -37,8 +39,14 @@ def debug_print(debug_message):
 		print(str(debug_message))
 
 def update_db():
-	db["users"] = users
-	requests.put(myjsonUrl, headers={'content-type':'application/json', 'data-type':'json'}, data=json.dumps(db)) # update users database
+	try:
+		f = open('./data.json', "w")
+		db["users"] = users
+		print(json.dumps(db))
+		f.write(json.dumps(db)) # update users database
+		f.close()
+	except:
+		debug_print('error updating db')
 
 def sendMessage(user_id, msg):
 	users[user_id]["last_botReply"] = (requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+str(user_id)+'&text='+msg+'&reply_markup='+replyMarkup+'&disable_web_page_preview=TRUE').text).replace('"',"'")
@@ -62,43 +70,46 @@ def getDishes(menuItems, mess_choice, t): # here type can only be 1,2,3 .... han
 	return s
 
 def fetchMenuItems():
-	global inlineResults
-	global BLDString
-	time = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
-	datestamp = "*"+time.strftime("%A")+", "+time.strftime("%d")+" "+time.strftime("%B")+" "+str(time.year)+"*\n\n"
-	for mess_choice in (0,1): # construct strings for all 10 types of menus
-		try:
-			menuItems= ((bs.BeautifulSoup(requests.get(messUrl, timeout=1).text,'lxml')).find_all(id='dh2MenuItems'))[mess_choice].find_all('td')
-			if('No Menu' in menuItems[0].text.strip()):
-				raise requests.exceptions.RequestException("_No Menu Available!_")
-			for t in types:
-				if t==1 or t==2 or t==3: 
-					BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice, t)
-				if t==4: # get according to current time
-					if time.hour<=10: #breakfast - midnight to 10:59am      #send entire menu at breakfast
+	try:
+		global inlineResults
+		global BLDString
+		time = datetime.datetime.now(pytz.timezone('Asia/Kolkata'))
+		datestamp = "*"+time.strftime("%A")+", "+time.strftime("%d")+" "+time.strftime("%B")+" "+str(time.year)+"*\n\n"
+		for mess_choice in (0,1): # construct strings for all 10 types of menus
+			try:
+				menuItems= ((bs.BeautifulSoup(requests.get(messUrl, timeout=1).text,'lxml')).find_all(id='dh2MenuItems'))[mess_choice].find_all('td')
+				if('No Menu' in menuItems[0].text.strip()):
+					raise requests.exceptions.RequestException("_No Menu Available!_")
+				for t in types:
+					if t==1 or t==2 or t==3: 
+						BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice, t)
+					if t==4: # get according to current time
+						if time.hour<=10: #breakfast - midnight to 10:59am      #send entire menu at breakfast
+							BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,1)+"\n"+getDishes(menuItems, mess_choice,2)+"\n"+getDishes(menuItems, mess_choice,3)
+						elif 11<=time.hour<=15: #lunch - 11am to 3:59pm
+							BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,2)
+						else: # dinner - 4pm to midnight
+							BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,3)
+					if t==5:
 						BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,1)+"\n"+getDishes(menuItems, mess_choice,2)+"\n"+getDishes(menuItems, mess_choice,3)
-					elif 11<=time.hour<=15: #lunch - 11am to 3:59pm
-						BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,2)
-					else: # dinner - 4pm to midnight
-						BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,3)
-				if t==5:
-					BLDString[mess_choice][t] = datestamp + getDishes(menuItems, mess_choice,1)+"\n"+getDishes(menuItems, mess_choice,2)+"\n"+getDishes(menuItems, mess_choice,3)
-		except requests.exceptions.RequestException as e:
+			except requests.exceptions.RequestException as e:
+				for t in types:
+					BLDString[mess_choice][t] = datestamp+"*DH"+str(mess_choice+1)+" "+"*\n----------------\n"+"Oops. Error. Verify at "+messUrl+", and to refresh my menu send /refresh.\n\n*ERROR:* _"+str(e)+"_\n"
+		
+		# construct strings for fast inline response
+		counter = 0
+		inlineResults = {0:[], 1:[]}
+		for mess_choice in (0,1):
 			for t in types:
-				BLDString[mess_choice][t] = datestamp+"*DH"+str(mess_choice+1)+" "+"*\n----------------\n"+"Oops. Error. Verify at "+messUrl+", and to refresh my menu send /refresh.\n\n*ERROR:* _"+str(e)+"_\n"
-	
-	# construct strings for fast inline response
-	counter = 0
-	inlineResults = {0:[], 1:[]}
-	for mess_choice in (0,1):
-		for t in types:
-			inlineResults[mess_choice].append({"type":"article","id":str(counter),"title":"DH"+str(mess_choice+1)+" - "+types[t],"input_message_content":{"message_text":BLDString[mess_choice][t], "parse_mode": "Markdown"}})
-			counter = counter+1
-		inlineResults[mess_choice].append({"type":"photo","id":str(counter),"title":"DH"+str(mess_choice+1)+" - Extras Menu","photo_file_id":str(extrasPhotoId[mess_choice]),"description":"DH"+str(mess_choice+1)+" - Extras Menu","caption":"DH"+str(mess_choice+1)+" - Extras Menu"})
-		counter = counter + 1
+				inlineResults[mess_choice].append({"type":"article","id":str(counter),"title":"DH"+str(mess_choice+1)+" - "+types[t],"input_message_content":{"message_text":BLDString[mess_choice][t], "parse_mode": "Markdown"}})
+				counter = counter+1
+			inlineResults[mess_choice].append({"type":"photo","id":str(counter),"title":"DH"+str(mess_choice+1)+" - Extras Menu","photo_file_id":str(extrasPhotoId[mess_choice]),"description":"DH"+str(mess_choice+1)+" - Extras Menu","caption":"DH"+str(mess_choice+1)+" - Extras Menu"})
+			counter = counter + 1
 
-	# debug_print(str(BLDString)+"\n\n\n"+str(inlineResults))
-	return "I'm up to date with SNU website now. Thanks!"
+		# debug_print(str(BLDString)+"\n\n\n"+str(inlineResults))
+		return "I'm up to date with SNU website now. Thanks!"
+	except:
+		return "Error fetching menu"
 
 def sendCurrentMenuAllUsers():
 	fetchMenuItems()
@@ -134,6 +145,7 @@ def att(attended, conducted, percentage='75'):
 		return s +"% = "+str(attended)+"/"+str(temp-1)
 
 def webhook_handler(response):
+	debug_print(response)
 	try:
 		requests.get('https://api.telegram.org/bot'+botToken+'/sendMessage?parse_mode=Markdown&chat_id='+debugId+'&text='+str(response), timeout=1)
 	except:
@@ -274,3 +286,4 @@ fetchMenuItems()
 
 if __name__ == "__main__":
 	app.run(threaded=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
